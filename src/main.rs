@@ -1,10 +1,8 @@
 mod emulator;
 mod platform;
 
-use std::{fs::File, io::Read};
-
 use emulator::Emulator;
-use platform::handle_keys;
+use platform::{map_keys, read_rom};
 
 use minifb::{Window, WindowOptions};
 
@@ -13,17 +11,24 @@ fn main() {
     let mut window = Window::new("CHIP-8 emulator", 640, 320, WindowOptions::default()).unwrap();
     window.set_target_fps(60);
 
-    // Reading ROM data
-    let mut buffer = [0u8; 0x800];
-    let mut file = File::open("./cal.ch8").unwrap();
-    file.read(&mut buffer).unwrap();
+    // Reading ROM from file specified in first argument of command call
+    let args: Vec<String> = std::env::args().collect();
+    let file_path = match args.get(1) {
+        Some(path) => path,
+        None => {
+            eprintln!("File name not specified.");
+            std::process::exit(1);
+        }
+    };
 
-    // Creatin emulator and loading ROM data
+    let data = read_rom(file_path);
+
+    // Creating emulator and loading ROM data
     let mut emulator = Emulator::new();
-    emulator.load_rom(&buffer);
+    emulator.load_rom(&data);
 
     while window.is_open() {
-        handle_keys(&window, |key, is_pressed| {
+        map_keys(&window, |key, is_pressed| {
             if is_pressed {
                 emulator.press_key(key)
             } else {

@@ -5,10 +5,7 @@ use super::Memory;
 struct Registers {
     v: [u8; 16], // General registers from 0x0 to 0xF
     i: u16,      // Needed to store memory adresses
-    dt: u8,      // Delay timer. Decrements 60 times per second
-    st: u8,      // Sound timer. Makes sound if its not equal to 0. Decrements 60 times per second
     pc: u16,     // Program counter, stores current memory address (u12).
-                 // Stack pointer doesnt belong here, its defined in Stack structure instead
 }
 
 impl Registers {
@@ -16,16 +13,25 @@ impl Registers {
         return Self {
             v: [0; 16],
             i: 0,
-            dt: 0,
-            st: 0,
             pc: 0x200,
         };
     }
 }
 
+struct Timers {
+    dt: u8, // Delay timer. Decrements 60 times per second
+    st: u8, // Sound timer. Makes sound if its not equal to 0. Decrements 60 times per second
+}
+
+impl Timers {
+    fn new() -> Self {
+        Self { dt: 0, st: 0 }
+    }
+}
+
 struct Stack {
     data: [u16; 16],
-    pointer: usize,
+    pointer: usize, // Stack pointer. Stores next free index in stack.
 }
 
 impl Stack {
@@ -50,6 +56,7 @@ impl Stack {
 
 pub struct Cpu {
     registers: Registers,
+    timers: Timers,
     stack: Stack,
 }
 
@@ -57,6 +64,7 @@ impl Cpu {
     pub fn new() -> Self {
         return Self {
             registers: Registers::new(),
+            timers: Timers::new(),
             stack: Stack::new(),
         };
     }
@@ -143,13 +151,13 @@ impl Cpu {
         self.execute_opcode(opcode, memory, display, keypad);
     }
 
-    pub fn decement_timers(&mut self) {
-        if self.registers.dt > 0 {
-            self.registers.dt -= 1;
+    pub fn decrement_timers(&mut self) {
+        if self.timers.dt > 0 {
+            self.timers.dt -= 1;
         }
-        print!("\x07");
-        if self.registers.st > 0 {
-            self.registers.st -= 1;
+
+        if self.timers.st > 0 {
+            self.timers.st -= 1;
         }
     }
 
@@ -360,7 +368,7 @@ impl Cpu {
     // Fx07 - LD Vx, DT
     /// Set Vx = delay timer value.    
     fn op_fx07(&mut self, x: usize) {
-        self.registers.v[x] = self.registers.dt
+        self.registers.v[x] = self.timers.dt
     }
 
     // Fx0A - LD Vx, K
@@ -378,13 +386,13 @@ impl Cpu {
     // Fx15 - LD DT, Vx
     /// Set delay timer = Vx.
     fn op_fx15(&mut self, x: usize) {
-        self.registers.dt = self.registers.v[x]
+        self.timers.dt = self.registers.v[x]
     }
 
     // Fx18 - LD ST, Vx
     /// Set sound timer = Vx.
     fn op_fx18(&mut self, x: usize) {
-        self.registers.st = self.registers.v[x]
+        self.timers.st = self.registers.v[x]
     }
 
     // Fx1E - ADD I, Vx

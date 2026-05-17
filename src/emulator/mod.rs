@@ -17,12 +17,12 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new() -> Self {
-        return Self {
+        Self {
             cpu: Cpu::new(),
             memory: Memory::new(),
             display: Display::new(),
             keypad: Keypad::new(),
-        };
+        }
     }
 
     pub fn load_rom(&mut self, data: &[u8]) {
@@ -35,7 +35,7 @@ impl Emulator {
     }
 
     pub fn decrement_timers(&mut self) {
-        self.cpu.decement_timers();
+        self.cpu.decrement_timers();
     }
 
     pub fn press_key(&mut self, key: u8) {
