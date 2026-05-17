@@ -1,73 +1,44 @@
-// GOVNOKOD!!!!!!
-// чисто тестовая хуйня потом будет минимальный набор
+mod emulator;
+mod platform;
 
-mod keyboard;
+use std::{fs::File, io::Read};
 
-use crossterm::terminal;
-pub mod emulator;
+use emulator::Emulator;
+use platform::handle_keys;
+
+use minifb::{Window, WindowOptions};
 
 fn main() {
-    // Terminal should get all entered characters immediately, raw mode allows this
-    terminal::enable_raw_mode().unwrap();
+    // Creating window
+    let mut window = Window::new("CHIP-8 emulator", 640, 320, WindowOptions::default()).unwrap();
+    window.set_target_fps(60);
 
-    let mut display = emulator::Display::new();
+    // Reading ROM data
+    let mut buffer = [0u8; 0x800];
+    let mut file = File::open("./cal.ch8").unwrap();
+    file.read(&mut buffer).unwrap();
 
-    let sprite: [u8; 8] = [
-        0b00111100, //   ████
-        0b01000010, //  █    █
-        0b10100101, // █ █  █ █
-        0b10000001, // █      █
-        0b10100101, // █ █  █ █
-        0b10011001, // █  ██  █
-        0b01000010, //  █    █
-        0b00111100, //   ████
-    ];
+    // Creatin emulator and loading ROM data
+    let mut emulator = Emulator::new();
+    emulator.load_rom(&buffer);
 
-    let mut offset = 0;
+    while window.is_open() {
+        handle_keys(&window, |key, is_pressed| {
+            if is_pressed {
+                emulator.press_key(key)
+            } else {
+                emulator.release_key(key)
+            }
+        });
 
-    // Main loop
-    let mut offset: i32 = 0;
-    let mut direction: i32 = 1; // 1 = вправо, -1 = влево
-
-    use std::time::Instant;
-
-    let mut frame_count = 0;
-    let mut fps_timer = Instant::now();
-    let start_time = Instant::now();
-    let timeout = std::time::Duration::from_secs(1); // 10 секунд работы
-
-    loop {
-        // Проверка таймаута
-        if start_time.elapsed() >= timeout {
-            println!("Время вышло!");
-            break;
+        for _ in 0..10 {
+            emulator.cycle();
         }
 
-        // let key = keyboard::read_key();
-        // if let Some(key) = key {
-        //     println!("{:?}", key);
-        // }
-        //
-        display.draw_sprite(&sprite, offset as usize, 20);
-        // print!("{}", display.render());
-        // display.clear();
-        display.render();
+        emulator.decrement_timers();
 
-        // Меняем offset
-        // offset += direction;
-        // if offset >= 60 {
-        //     direction = -1;
-        // } else if offset == 0 {
-        //     direction = 1;
-        // }
-
-        // Счётчик FPS
-        frame_count += 1;
-        let elapsed = fps_timer.elapsed();
-        if elapsed >= std::time::Duration::from_secs(1) {
-            println!("FPS: {}", frame_count);
-            frame_count = 0;
-            fps_timer = Instant::now();
-        }
+        window
+            .update_with_buffer(&emulator.render(), 64, 32)
+            .unwrap()
     }
 }

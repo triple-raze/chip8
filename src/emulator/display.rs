@@ -15,28 +15,25 @@ impl Display {
         }
     }
 
-    pub fn render(&self) -> String {
-        const PIXEL_CHAR: char = '\u{2588}';
-        const SPACE_CHAR: char = ' ';
+    pub fn render(&self) -> [u32; DISPLAY_WIDTH * DISPLAY_HEIGHT] {
+        const WHITE: u32 = 0xFFFFFF;
+        const BLACK: u32 = 0x000000;
 
-        self.pixels
-            .iter()
-            .map(|&bitmask| {
-                let mut line = (0..64)
-                    .rev()
-                    .map(|offset| {
-                        if bitmask >> offset & 1 == 1 {
-                            PIXEL_CHAR
-                        } else {
-                            SPACE_CHAR
-                        }
-                    })
-                    .collect::<String>();
+        let mut result = [BLACK; DISPLAY_WIDTH * DISPLAY_HEIGHT];
+        let mut idx = 0;
 
-                line.push('\n');
-                line
-            })
-            .collect()
+        for &bitmask in self.pixels.iter() {
+            for offset in (0..DISPLAY_WIDTH).rev() {
+                result[idx] = if (bitmask >> offset) & 1 == 1 {
+                    WHITE
+                } else {
+                    BLACK
+                };
+                idx += 1;
+            }
+        }
+
+        result
     }
 
     pub fn clear(&mut self) {
